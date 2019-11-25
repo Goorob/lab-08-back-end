@@ -107,6 +107,7 @@ function getweatherinfo(query) {
       });
     });
 }
+
 //to test weather no local host : http://localhost:3000/weather?data[latitude]=31.9539494&data[longitude]=35.910635
 function Weather(day) {
 
