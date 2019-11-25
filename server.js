@@ -32,22 +32,52 @@ function locationinfo(request, response) {
     console.log('am iniside location');
   // let locationData = getlocationinfo(request.query.data)
   // response.status(200).json(`locationData`);
-  getlocationinfo(request.query.data)
-    .then( locationData => response.status(200).json(locationData) );
+  const city = request.query.data
+  getlocationinfo(city)
+    .then( locationData => response.status(200).json(locationData) )
+    .catch((error) => errorHandler(error, request, response));
 }
 function getlocationinfo(city) {
-  // let data = require('./data/geo.json');
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${city}&key=${process.env.GEOCODE_API_KEY}`;
-  // console.log(url );
-  // return new Location(city, data);
-  return superagent.get(url)
-    .then( data => {
-      return new Location(city, data.body);
+
+  let SQL = 'select * FROM searchLoction WHERE search_query = $1 ';
+  let values = [city];
+  return client.query(SQL, values)
+    .then(results => {
+      if (results.rowCount) { return results.rows[0]; }
+      else {
+        const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${city}&key=${process.env.GEOCODE_API_KEY}`;
+        return superagent.get(url)
+          .then(data => cacheLocation(city, data.body));
+          return new Location (city , data.body);
+      }
+      
+    });
+};
+let cache = {};
+function cacheLocation(city, data) {
+  const location = new Location(data.results[0]);
+  let SQL = 'INSERT INTO searchLoction (search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING *';
+  let values = [city, location.formatted_query, location.latitude, location.longitude];
+  return client.query(SQL, values)
+    .then(results => {
+      const savedLocation = results.rows[0];
+      cache[city] = savedLocation;
+      return savedLocation;
     });
 }
+
+  // let data = require('./data/geo.json');
+  // const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${city}&key=${process.env.GEOCODE_API_KEY}`;
+  // console.log(url );
+  // return new Location(city, data);
+  // return superagent.get(url)
+  //   .then( data => {
+  //     return new Location(city, data.body);
+
+
 //to test location no local host : http://localhost:3000/location
 function Location(city, data) {
-  this.search_query = city;
+  // this.search_query = city;
   this.formatted_query = data.results[0].formatted_address;
   this.latitude = data.results[0].geometry.location.lat;
   this.longitude = data.results[0].geometry.location.lng;
@@ -129,7 +159,9 @@ app.use('*', (request, response) => {
 app.use((error,request,response) => {
   response.status(500).send(error);
 });
-
+function errorHandler(error, req, res) {
+  res.status(500).send(error);
+}
 
 
 client.connect()

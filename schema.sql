@@ -1,9 +1,9 @@
-DROP TABLE IF EXISTS location;
+DROP TABLE IF EXISTS searchLoction;
 
-CREATE TABLE location (
+CREATE TABLE searchLoction (
     id SERIAL PRIMARY KEY,
-    search_query VARCHAR(300),
-    formatted_query  VARCHAR(300),
-    latitude VARCHAR(300),
-    longitude VARCHAR(300)
+    search_query VARCHAR(255),
+    formatted_query  VARCHAR(255),
+    latitude numeric ,
+    longitude numeric 
 );
